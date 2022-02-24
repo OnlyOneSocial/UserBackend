@@ -307,8 +307,18 @@ func (s *server) HandleGetUser() http.HandlerFunc {
 		if err != nil && err.Error() == "sql: no rows in result set" {
 			friendStatus.Status = 3
 		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-		s.respond(w, request, http.StatusOK, User{User: user, Friends: friends, FriendStatus: FriendStatus{ForMe: friendStatus.ForMe, Status: friendStatus.Status}})
+		UserModel := User{
+			User:    user,
+			Friends: friends,
+			FriendStatus: FriendStatus{
+				ForMe:  friendStatus.ForMe,
+				Status: friendStatus.Status,
+			},
+		}
+
+		s.respond(w, request, http.StatusOK, UserModel)
 	}
 }
 
@@ -327,7 +337,7 @@ func (s *server) HandleGetUsers() http.HandlerFunc {
 		if err != nil {
 			return
 		}
-
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		s.respond(w, request, http.StatusOK, Users{Users: users, Total: count})
 	}
 }

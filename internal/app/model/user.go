@@ -1,6 +1,7 @@
 package model
 
 import (
+	"regexp"
 	"strings"
 
 	validation "github.com/go-ozzo/ozzo-validation"
@@ -39,9 +40,11 @@ type SettingsMain struct {
 
 //Validate ...
 func (u *User) Validate() error {
+	SpaceRule := validation.NewStringRule(ValidateWhiteSpaces, "Space not allowed")
+
 	return validation.ValidateStruct(
 		u,
-		validation.Field(&u.Username, validation.Required, validation.Length(1, 400)),
+		validation.Field(&u.Username, validation.Required, validation.Length(1, 100), SpaceRule),
 		validation.Field(&u.Password, validation.Required),
 	)
 }
@@ -80,4 +83,18 @@ func encryptString(s string) (string, error) {
 	}
 
 	return string(b), nil
+}
+
+//ValidateWhiteSpaces ...
+func ValidateWhiteSpaces(str string) bool {
+	rule, err := regexp.Compile(`\s+`)
+	if err != nil {
+		return false
+	}
+
+	data := rule.FindAllString(str, 1)
+	if len(data) > 0 {
+		return false
+	}
+	return true
 }
