@@ -36,6 +36,7 @@ var (
 	errIncorrectEmailOrPassword = errors.New("incorect email or password")
 	jwtsignkey                  string
 	recaptchaSecret             string
+	recaptchaSecretAndroid      string
 	selectelUser                string
 	selectelPassword            string
 )
@@ -53,6 +54,7 @@ func newServer(store store.Store, config *Config) *server {
 
 	jwtsignkey = config.JwtSignKey
 	recaptchaSecret = config.RecaptchaSecret
+	recaptchaSecretAndroid = config.RecaptchaSecretAndroid
 	selectelUser = config.Selectel.User
 	selectelPassword = config.Selectel.Password
 
@@ -153,10 +155,19 @@ func (s *server) configureRouter() {
 	s.ConfigureUserRouter()
 }
 
-func (s *server) VerifyRecaptcha(captcha string) bool {
+func (s *server) VerifyRecaptcha(captcha string, android bool) bool {
+
+	var recaptchaSecretLocal string
+
+	switch android {
+	case true:
+		recaptchaSecretLocal = recaptchaSecretAndroid
+	case false:
+		recaptchaSecretLocal = recaptchaSecret
+	}
 
 	data := url.Values{
-		"secret":   {recaptchaSecret},
+		"secret":   {recaptchaSecretLocal},
 		"response": {captcha},
 	}
 

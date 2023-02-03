@@ -26,8 +26,11 @@ require (
 )
 
 require (
-	github.com/ernado/selectel v0.0.0-20180425092417-d4f4d949c7b0
 	github.com/golang-jwt/jwt v3.2.2+incompatible
-	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	golang.org/x/crypto v0.0.0-20211202192323-5770296d904e
+)
+
+require (
+	github.com/ernado/selectel v0.0.0-20180425092417-d4f4d949c7b0 // indirect
+	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
 )

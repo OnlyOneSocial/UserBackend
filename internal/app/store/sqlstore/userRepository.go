@@ -168,7 +168,7 @@ func (r *UserRepository) Find(userid int) (model.User, error) {
 func (r *UserRepository) Get() ([]model.User, error) {
 	var users []model.User
 
-	rows, err := r.store.db.Query("SELECT username,id,avatar from users")
+	rows, err := r.store.db.Query("SELECT username,id,avatar from users order by id")
 	if err != nil {
 		return users, err
 	}

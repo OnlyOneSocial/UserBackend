@@ -24,9 +24,12 @@ import (
 func (s *server) ConfigureUserRouter() {
 
 	router := s.router.PathPrefix("/api/user").Subrouter()
-	router.HandleFunc("/get/{id}", s.HandleGetUser()).Methods("GET")                  // Получение данных о пользователе
-	router.HandleFunc("/get", s.HandleGetUsers()).Methods("GET")                      // Получение данных о пользователях
-	router.HandleFunc("/login", s.HandleLoginUser()).Methods("POST")                  // Авторизация
+	router.HandleFunc("/get/{id}", s.HandleGetUser()).Methods("GET") // Получение данных о пользователе
+	router.HandleFunc("/get", s.HandleGetUsers()).Methods("GET")     // Получение данных о пользователях
+	router.HandleFunc("/thisuser", s.HandleGetThisUser()).Methods("GET")
+	router.HandleFunc("/login", s.HandleLoginUser()).Methods("POST")                // Авторизация
+	router.HandleFunc("/login_android", s.HandleLoginUserAndroid()).Methods("POST") // Авторизация
+
 	router.HandleFunc("/register", s.HandleCreateUser()).Methods("POST")              // Регистрация
 	router.HandleFunc("/settings", s.HandleChangeSettingsMain()).Methods("PUT")       /* Изменение настроек*/
 	router.HandleFunc("/status", s.HandleChangeStatus()).Methods("PUT")               /* Изменение статуса*/
@@ -265,6 +268,25 @@ func (s *server) HandleChangeStatus() http.HandlerFunc {
 	}
 }
 
+func (s *server) HandleGetThisUser() http.HandlerFunc {
+	return func(w http.ResponseWriter, request *http.Request) {
+		userid, err := s.JWTproccessingAndUpdateOnline(w, request)
+		if err != nil {
+			s.error(w, request, http.StatusUnauthorized, err)
+			return
+		}
+
+		user, err := s.store.User().Find(userid)
+		if err != nil {
+			s.error(w, request, http.StatusNotFound, errors.New("not found"))
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		s.respond(w, request, http.StatusOK, user)
+	}
+}
+
 func (s *server) HandleGetUser() http.HandlerFunc {
 	type FriendStatus struct {
 		ForMe  bool `json:"forme"`
@@ -279,7 +301,7 @@ func (s *server) HandleGetUser() http.HandlerFunc {
 		vars := mux.Vars(request)
 		userid2, err := strconv.Atoi(vars["id"])
 		if err != nil {
-			s.error(w, request, http.StatusNotFound, errors.New("not found"))
+			s.error(w, request, http.StatusBadRequest, err)
 			return
 		}
 
@@ -342,7 +364,7 @@ func (s *server) HandleGetUsers() http.HandlerFunc {
 	}
 }
 
-// InitJWT ...
+//InitJWT ...
 func (s *server) InitJWT(UserID int) (string, error) {
 	token := jwt.New(jwt.SigningMethodHS256)
 
@@ -355,7 +377,7 @@ func (s *server) InitJWT(UserID int) (string, error) {
 	return tokenString, err
 }
 
-// Register ...
+//Register ...
 type Register struct {
 	Password  string `json:"password"`
 	Login     string `json:"username"`
@@ -377,7 +399,7 @@ func (s *server) HandleCreateUser() http.HandlerFunc {
 		user.Password = createPost.Password
 		user.Username = createPost.Login
 
-		status := s.VerifyRecaptcha(createPost.Recaptcha)
+		status := s.VerifyRecaptcha(createPost.Recaptcha, false)
 
 		if status != true {
 			s.error(w, request, http.StatusBadRequest, errors.New("captcha is incorrect"))
@@ -422,60 +444,93 @@ func (s *server) HandleCreateUser() http.HandlerFunc {
 	}
 }
 
-func (s *server) HandleLoginUser() http.HandlerFunc {
-	type UserLoginOutput struct {
-		ID       int    `json:"id"`
-		Username string `json:"username"`
-		Avatar   string `json:"avatar"`
-		Jwt      string `json:"jwt"`
+type UserLoginOutput struct {
+	ID       int    `json:"id"`
+	Username string `json:"username"`
+	Avatar   string `json:"avatar"`
+	Jwt      string `json:"jwt"`
+}
+
+func (s *server) LoginAuth(loginData Register, android bool) (output UserLoginOutput, err error) {
+
+	var user model.User
+	user.Password = loginData.Password
+
+	status := s.VerifyRecaptcha(loginData.Recaptcha, android)
+
+	if status != true {
+		return output, errors.New("captcha is incorrect")
 	}
+
+	username := strings.ToLower(loginData.Login)
+	username = strings.TrimSpace(username)
+	user.Username = username
+
+	if username == "" {
+		return output, errors.New("username is empty")
+	}
+
+	userFind, err := s.store.User().FindByUsername(username)
+
+	if err != nil && err.Error() == "sql: no rows in result set" {
+		return output, errors.New("password is incorrect")
+	}
+
+	if !userFind.ComparePassword(loginData.Password) {
+		return output, errors.New("password is incorrect")
+	}
+
+	if userFind.ComparePassword(loginData.Password) {
+
+		jwt, err := s.InitJWT(userFind.ID)
+
+		if err != nil {
+			return output, err
+		}
+
+		output.Jwt = jwt
+		output.ID = userFind.ID
+		output.Username = userFind.Username
+		output.Avatar = userFind.Avatar
+
+		return output, nil
+	}
+	return output, nil
+
+}
+
+func (s *server) HandleLoginUser() http.HandlerFunc {
+
 	return func(w http.ResponseWriter, request *http.Request) {
+
 		var createPost Register
 		json.NewDecoder(request.Body).Decode(&createPost)
 
-		var user model.User
-		user.Password = createPost.Password
-
-		status := s.VerifyRecaptcha(createPost.Recaptcha)
-
-		if status != true {
-			s.error(w, request, http.StatusBadRequest, errors.New("captcha is incorrect"))
+		output, err := s.LoginAuth(createPost, false)
+		if err != nil {
+			s.error(w, request, http.StatusBadRequest, errors.New("this user is registered"))
 			return
 		}
 
-		username := strings.ToLower(createPost.Login)
-		username = strings.TrimSpace(username)
-		user.Username = username
+		s.respond(w, request, http.StatusOK, output)
 
-		if username == "" {
-			s.error(w, request, http.StatusBadRequest, errors.New("username is empty"))
+	}
+}
+
+func (s *server) HandleLoginUserAndroid() http.HandlerFunc {
+
+	return func(w http.ResponseWriter, request *http.Request) {
+
+		var createPost Register
+		json.NewDecoder(request.Body).Decode(&createPost)
+
+		output, err := s.LoginAuth(createPost, true)
+		if err != nil {
+			s.error(w, request, http.StatusBadRequest, err)
 			return
 		}
-
-		userFind, err := s.store.User().FindByUsername(username)
-
-		if err != nil && err.Error() == "sql: no rows in result set" {
-			s.error(w, request, http.StatusBadRequest, errors.New("this user is not found"))
-			return
-		}
-
-		if !userFind.ComparePassword(createPost.Password) {
-			s.error(w, request, http.StatusBadRequest, errors.New("password is incorrect"))
-			return
-		}
-
-		if userFind.ComparePassword(createPost.Password) {
-
-			jwt, err := s.InitJWT(userFind.ID)
-
-			if err != nil {
-				s.error(w, request, http.StatusBadRequest, err)
-				return
-			}
-
-			Output := UserLoginOutput{ID: userFind.ID, Username: userFind.Username, Avatar: userFind.Avatar, Jwt: jwt}
-			s.respond(w, request, http.StatusOK, Output)
-		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		s.respond(w, request, http.StatusOK, output)
 
 	}
 }

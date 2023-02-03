@@ -8,12 +8,13 @@ type Selectel struct {
 
 //Config ...
 type Config struct {
-	BindAddr        string   `toml:"bind_addr"`
-	LogLevel        string   `toml:"log_level"`
-	DatabaseURL     string   `toml:"database_url"`
-	JwtSignKey      string   `toml:"jwtsignkey"`
-	RecaptchaSecret string   `toml:"recaptcha_secret"`
-	Selectel        Selectel `toml:"Selectel"`
+	BindAddr               string   `toml:"bind_addr"`
+	LogLevel               string   `toml:"log_level"`
+	DatabaseURL            string   `toml:"database_url"`
+	JwtSignKey             string   `toml:"jwtsignkey"`
+	RecaptchaSecret        string   `toml:"recaptcha_secret"`
+	RecaptchaSecretAndroid string   `toml:"recaptcha_secret_android"`
+	Selectel               Selectel `toml:"Selectel"`
 }
 
 // NewConfig ...
