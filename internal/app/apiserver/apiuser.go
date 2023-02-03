@@ -301,7 +301,7 @@ func (s *server) HandleGetUser() http.HandlerFunc {
 		vars := mux.Vars(request)
 		userid2, err := strconv.Atoi(vars["id"])
 		if err != nil {
-			s.error(w, request, http.StatusBadRequest, err)
+			s.error(w, request, http.StatusNotFound, err)
 			return
 		}
 
@@ -364,7 +364,7 @@ func (s *server) HandleGetUsers() http.HandlerFunc {
 	}
 }
 
-//InitJWT ...
+// InitJWT ...
 func (s *server) InitJWT(UserID int) (string, error) {
 	token := jwt.New(jwt.SigningMethodHS256)
 
@@ -377,7 +377,7 @@ func (s *server) InitJWT(UserID int) (string, error) {
 	return tokenString, err
 }
 
-//Register ...
+// Register ...
 type Register struct {
 	Password  string `json:"password"`
 	Login     string `json:"username"`
