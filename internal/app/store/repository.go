@@ -2,7 +2,7 @@ package store
 
 import "github.com/katelinlis/UserBackend/internal/app/model"
 
-//FriendsRepository ...
+// FriendsRepository ...
 type FriendsRepository interface {
 	SendRequest(*model.Friends) error
 	Accept(*model.Friends) error
@@ -17,7 +17,7 @@ type FriendsRepository interface {
 	GetAllSubscribes(user int) ([]model.Friends, error)
 }
 
-//UserRepository ...
+// UserRepository ...
 type UserRepository interface {
 	Create(*model.User) error
 	SetAvatar(userid int, avatar string) error
@@ -31,6 +31,7 @@ type UserRepository interface {
 	Update(*model.User) error
 	Find(userid int) (model.User, error)
 	FindByUsername(username string) (model.User, error)
+	FindByUsernameLike(username string) ([]model.User, error)
 	FindByUsernameAndPassword(u *model.User) error
 	GetCount() (int, error)
 	Get() ([]model.User, error)

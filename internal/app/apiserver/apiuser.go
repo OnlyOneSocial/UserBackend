@@ -24,6 +24,7 @@ import (
 func (s *server) ConfigureUserRouter() {
 
 	router := s.router.PathPrefix("/api/user").Subrouter()
+	router.HandleFunc("/search", s.HandleSearchUser()).Methods("GET")
 	router.HandleFunc("/get/{id}", s.HandleGetUser()).Methods("GET") // Получение данных о пользователе
 	router.HandleFunc("/get", s.HandleGetUsers()).Methods("GET")     // Получение данных о пользователях
 	router.HandleFunc("/thisuser", s.HandleGetThisUser()).Methods("GET")
@@ -54,6 +55,16 @@ func (s *server) JWTproccessingAndUpdateOnline(w http.ResponseWriter, request *h
 
 	return id, nil
 
+}
+
+func (s *server) HandleSearchUser() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		urlParams := r.URL.Query()
+		username := urlParams["username"]
+		if len(username) > 0 {
+			s.store.User().FindByUsernameLike(username[0])
+		}
+	}
 }
 
 func (s *server) HandleChangeAvatar() http.HandlerFunc {

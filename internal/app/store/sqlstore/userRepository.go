@@ -8,12 +8,12 @@ import (
 	"github.com/katelinlis/UserBackend/internal/app/model"
 )
 
-//UserRepository ...
+// UserRepository ...
 type UserRepository struct {
 	store *Store
 }
 
-//Create ...
+// Create ...
 func (r *UserRepository) Create(u *model.User) error {
 
 	err := u.Validate()
@@ -39,7 +39,7 @@ func (r *UserRepository) Create(u *model.User) error {
 	return err
 }
 
-//AddToBanList ...
+// AddToBanList ...
 func (r *UserRepository) AddToBanList(user int, whoToBanned int) (bool, error) {
 	err := r.store.db.QueryRow("UPDATE users SET banlist = array_append(banlist,$1) WHERE id=$2 RETURNING id", whoToBanned, user)
 
@@ -51,7 +51,7 @@ func (r *UserRepository) AddToBanList(user int, whoToBanned int) (bool, error) {
 	return true, nil
 }
 
-//RemoveToBanList ...
+// RemoveToBanList ...
 func (r *UserRepository) RemoveFromBanList(user int, WhoUnban int) (bool, error) {
 	err := r.store.db.QueryRow("UPDATE users SET banlist = array_remove(banlist,$1) WHERE id=$2 RETURNING id", WhoUnban, user)
 
@@ -63,7 +63,7 @@ func (r *UserRepository) RemoveFromBanList(user int, WhoUnban int) (bool, error)
 	return true, nil
 }
 
-//SetAvatar ...
+// SetAvatar ...
 func (r *UserRepository) SetAvatar(userid int, avatar string) error {
 	var id int
 	err := r.store.db.QueryRow("UPDATE users SET avatar = $1 where id=$2 RETURNING id",
@@ -78,7 +78,7 @@ func (r *UserRepository) SetAvatar(userid int, avatar string) error {
 	return err
 }
 
-//SetIP ...
+// SetIP ...
 func (r *UserRepository) SetIP(userid int, ip string) error {
 	var id int
 	err := r.store.db.QueryRow("UPDATE users SET avatar = $1 where id=$2 RETURNING id",
@@ -93,7 +93,7 @@ func (r *UserRepository) SetIP(userid int, ip string) error {
 	return err
 }
 
-//Update ...
+// Update ...
 func (r *UserRepository) Update(u *model.User) error {
 	err := r.store.db.QueryRow("UPDATE users SET first_name = $1,last_name = $2,username = $3, where id=$4 RETURNING id",
 		u.FirstName,
@@ -105,7 +105,7 @@ func (r *UserRepository) Update(u *model.User) error {
 	return err
 }
 
-//ChangeStatus ...
+// ChangeStatus ...
 func (r *UserRepository) ChangeStatus(userid int, status string) error {
 	var id int
 	err := r.store.db.QueryRow("UPDATE users SET status = $1 where id=$2 RETURNING id",
@@ -115,7 +115,7 @@ func (r *UserRepository) ChangeStatus(userid int, status string) error {
 	return err
 }
 
-//ChangePassword ...
+// ChangePassword ...
 func (r *UserRepository) ChangePassword(user *model.User) error {
 	var id int
 
@@ -128,7 +128,7 @@ func (r *UserRepository) ChangePassword(user *model.User) error {
 	return err
 }
 
-//UpdateOnline ...
+// UpdateOnline ...
 func (r *UserRepository) UpdateOnline(userid int) error {
 	var id int
 	err := r.store.db.QueryRow("UPDATE users SET online = $1 where id=$2 RETURNING id",
@@ -138,7 +138,7 @@ func (r *UserRepository) UpdateOnline(userid int) error {
 	return err
 }
 
-//Find ...
+// Find ...
 func (r *UserRepository) Find(userid int) (model.User, error) {
 	var user model.User
 	var avatar sql.NullString
@@ -164,7 +164,7 @@ func (r *UserRepository) Find(userid int) (model.User, error) {
 	return user, err
 }
 
-//Get ...
+// Get ...
 func (r *UserRepository) Get() ([]model.User, error) {
 	var users []model.User
 
@@ -188,7 +188,7 @@ func (r *UserRepository) Get() ([]model.User, error) {
 	return users, err
 }
 
-//FindByUsername ...
+// FindByUsername ...
 func (r *UserRepository) FindByUsername(username string) (model.User, error) {
 	var user model.User
 	var avatar sql.NullString
@@ -200,7 +200,29 @@ func (r *UserRepository) FindByUsername(username string) (model.User, error) {
 	return user, err
 }
 
-//ChangeSettingsMain ...
+func (r *UserRepository) FindByUsernameLike(username string) (users []model.User, err error) {
+
+	rows, err := r.store.db.Query(`SELECT username,id,avatar FROM users WHERE username LIKE %?% order by id`)
+	if err != nil {
+		return users, err
+	}
+
+	for rows.Next() {
+		user := model.User{}
+		var avatar sql.NullString
+		err := rows.Scan(&user.Username, &user.ID, &avatar)
+		user.Avatar = avatar.String
+		if err != nil {
+			return users, err
+		}
+
+		users = append(users, user)
+
+	}
+	return users, err
+}
+
+// ChangeSettingsMain ...
 func (r *UserRepository) ChangeSettingsMain(settings *model.SettingsMain) error {
 
 	err := r.store.db.QueryRow("UPDATE users SET country = $2,city = $3,gender = $4,bio = $5, birthday = $6 where id=$1 RETURNING id",
@@ -214,7 +236,7 @@ func (r *UserRepository) ChangeSettingsMain(settings *model.SettingsMain) error 
 	return err
 }
 
-//FindByUsernameAndPassword ...
+// FindByUsernameAndPassword ...
 func (r *UserRepository) FindByUsernameAndPassword(u *model.User) error {
 
 	err := r.store.db.QueryRow("SELECT username,id,first_name,last_name,avatar,user_location where username = $1 and password = $2",
@@ -225,7 +247,7 @@ func (r *UserRepository) FindByUsernameAndPassword(u *model.User) error {
 	return err
 }
 
-//GetCount ...
+// GetCount ...
 func (r *UserRepository) GetCount() (int, error) {
 	var count int
 	err := r.store.db.QueryRow("SELECT Count (*) from users").Scan(&count)
