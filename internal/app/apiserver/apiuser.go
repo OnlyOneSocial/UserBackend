@@ -61,9 +61,16 @@ func (s *server) HandleSearchUser() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		urlParams := r.URL.Query()
 		username := urlParams["username"]
-		if len(username) > 0 {
-			s.store.User().FindByUsernameLike(username[0])
+		if len(username) <= 0 {
+			s.error(w, r, http.StatusBadRequest, errors.New("don`t username"))
 		}
+		users, err := s.store.User().FindByUsernameLike(username[0])
+		if err != nil {
+			s.error(w, r, http.StatusBadRequest, errors.New("don`t username"))
+		}
+
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		s.respond(w, r, http.StatusOK, users)
 	}
 }
 
