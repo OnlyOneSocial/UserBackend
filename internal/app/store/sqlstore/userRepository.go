@@ -200,6 +200,7 @@ func (r *UserRepository) FindByUsername(username string) (model.User, error) {
 	return user, err
 }
 
+//FindByUsernameLike ...
 func (r *UserRepository) FindByUsernameLike(username string) (users []model.User, err error) {
 	query := `SELECT username,id,avatar FROM users WHERE lower(username) LIKE '%' || lower($1) || '%' order by id`
 
