@@ -35,4 +35,6 @@ type UserRepository interface {
 	FindByUsernameAndPassword(u *model.User) error
 	GetCount() (int, error)
 	Get() ([]model.User, error)
+	GetAllUsersWithPassword() (users []model.User, err error)
+	UpdateUserConnectToKeyCloak(userid int, keycloak string) error
 }

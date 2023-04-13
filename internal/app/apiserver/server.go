@@ -39,6 +39,7 @@ var (
 	recaptchaSecretAndroid      string
 	selectelUser                string
 	selectelPassword            string
+	keycloakClient              KeyclockClient
 )
 
 func newServer(store store.Store, config *Config) *server {
@@ -57,6 +58,8 @@ func newServer(store store.Store, config *Config) *server {
 	recaptchaSecretAndroid = config.RecaptchaSecretAndroid
 	selectelUser = config.Selectel.User
 	selectelPassword = config.Selectel.Password
+
+	keycloakClient = config.KeyclockClient
 
 	return s
 }

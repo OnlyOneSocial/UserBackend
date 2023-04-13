@@ -2,6 +2,7 @@ package apiserver
 
 import (
 	"bytes"
+	"context"
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
@@ -10,11 +11,14 @@ import (
 	"image"
 	"image/jpeg"
 	"image/png"
+	"io/ioutil"
 	"net/http"
+	"net/mail"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/Nerzal/gocloak/v13"
 	"github.com/golang-jwt/jwt"
 	"github.com/gorilla/mux"
 	"github.com/katelinlis/UserBackend/internal/app/model"
@@ -26,6 +30,9 @@ func (s *server) ConfigureUserRouter() {
 	router := s.router.PathPrefix("/api/user").Subrouter()
 
 	router.HandleFunc("/search", s.HandleSearchUser()).Methods("GET")
+	router.HandleFunc("/transferAccountsToKeyCloak", s.HandleTransferAccountsToKeyCloak()).Methods("GET")
+
+	router.HandleFunc("/testUser", s.HandleTestUser()).Methods("GET")
 
 	router.HandleFunc("/get/{id}", s.HandleGetUser()).Methods("GET") // Получение данных о пользователе
 	router.HandleFunc("/get", s.HandleGetUsers()).Methods("GET")     // Получение данных о пользователях
@@ -552,5 +559,127 @@ func (s *server) HandleLoginUserAndroid() http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		s.respond(w, request, http.StatusOK, output)
 
+	}
+}
+
+func (s *server) HandleTestUser() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		client := gocloak.NewClient("https://id.only-one.su")
+
+		ctx := context.Background()
+		token, err := client.LoginAdmin(ctx, "usernametest", "usernametest", "onlyone")
+		if err != nil {
+			panic("Login failed:" + err.Error())
+		}
+
+		userid, err := verifyToken(token.AccessToken, "C:/Users/katel/golang/FriendsBackend/public_key.key")
+
+		if err != nil {
+			println(err)
+		}
+
+		println(userid.UserUUID)
+	}
+}
+
+type UserAuth struct {
+	UserUUID string
+	Username string
+}
+
+func verifyToken(token, publicKeyPath string) (userAuth UserAuth, err error) {
+	keyData, err := ioutil.ReadFile(publicKeyPath)
+	if err != nil {
+		return userAuth, err
+	}
+	key, err := jwt.ParseRSAPublicKeyFromPEM(keyData)
+	if err != nil {
+		return userAuth, err
+	}
+
+	parsedToken, err := jwt.Parse(token, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
+			msg := fmt.Errorf("Unexpected signing method: %v", t.Header["alg"])
+			return 0, msg
+		}
+		return key, nil
+	})
+
+	if parsedToken != nil && parsedToken.Valid {
+		if claims, ok := parsedToken.Claims.(jwt.MapClaims); ok {
+			username := claims["preferred_username"].(string)
+			UserUUID := claims["sub"].(string)
+
+			return UserAuth{
+				UserUUID: UserUUID,
+				Username: username,
+			}, nil
+		}
+	}
+
+	return userAuth, nil
+}
+
+func generateUserCloak(username string, email string, password string) gocloak.User {
+	userCloak := gocloak.User{}
+	bcryptAlgoritm := "bcrypt"
+	typePassword := "password"
+	//email := "ksupe@only-one.su"
+	//username := "sup"
+	userEnabled := true
+	//password := "ddd"
+	hashIterations := int32(4)
+
+	credentials := []gocloak.CredentialRepresentation{}
+	credentials = append(credentials, gocloak.CredentialRepresentation{
+		Algorithm:         &bcryptAlgoritm,
+		HashedSaltedValue: &password,
+		HashIterations:    &hashIterations,
+		Type:              &typePassword,
+	})
+
+	userCloak.Email = &email
+	userCloak.Username = &username
+	userCloak.Credentials = &credentials
+	userCloak.Enabled = &userEnabled
+
+	return userCloak
+}
+
+func (s *server) HandleTransferAccountsToKeyCloak() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		client := gocloak.NewClient("https://id.only-one.su")
+
+		ctx := context.Background()
+		token, err := client.LoginClient(ctx, keycloakClient.ClientID, keycloakClient.SecretID, "master")
+		if err != nil {
+			s.error(w, r, http.StatusBadRequest, err)
+			return
+		}
+
+		users, err := s.store.User().GetAllUsersWithPassword()
+
+		if err != nil {
+			s.error(w, r, http.StatusBadRequest, err)
+			return
+		}
+
+		for _, user := range users {
+
+			email, _ := mail.ParseAddress(user.Username)
+
+			data, err := client.CreateUser(ctx, token.AccessToken, "onlyone", generateUserCloak(user.Username, email.Address, user.EncruptedPassword))
+			if err != nil {
+				s.error(w, r, http.StatusBadRequest, err)
+				return
+			}
+			err = s.store.User().UpdateUserConnectToKeyCloak(user.ID, data)
+			if err != nil {
+				s.error(w, r, http.StatusBadRequest, err)
+				return
+			}
+
+		}
 	}
 }

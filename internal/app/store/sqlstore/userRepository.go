@@ -138,6 +138,16 @@ func (r *UserRepository) UpdateOnline(userid int) error {
 	return err
 }
 
+//UpdateUserConnectToKeyCloak ...
+func (r *UserRepository) UpdateUserConnectToKeyCloak(userid int, keycloak string) error {
+	var id int
+	err := r.store.db.QueryRow("UPDATE users SET SSOID = $1 where id=$2 RETURNING id",
+		keycloak,
+		userid,
+	).Scan(&id)
+	return err
+}
+
 // Find ...
 func (r *UserRepository) Find(userid int) (model.User, error) {
 	var user model.User
@@ -236,6 +246,24 @@ func (r *UserRepository) ChangeSettingsMain(settings *model.SettingsMain) error 
 		settings.BirthdayDate,
 	).Scan(&settings.ID)
 	return err
+}
+
+// GetAllUsersWithPassword ...
+func (r *UserRepository) GetAllUsersWithPassword() (users []model.User, err error) {
+
+	rows, err := r.store.db.Query("SELECT username,id,password from users")
+
+	for rows.Next() {
+		user := model.User{}
+		err = rows.Scan(&user.Username, &user.ID, &user.EncruptedPassword)
+		if err != nil {
+			return users, err
+		}
+
+		users = append(users, user)
+	}
+
+	return users, err
 }
 
 // FindByUsernameAndPassword ...
