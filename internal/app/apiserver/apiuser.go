@@ -331,15 +331,15 @@ func (s *server) HandleGetUser() http.HandlerFunc {
 			return
 		}
 
+		JwtUser, err := s.JWTproccessingAndUpdateOnline(w, request)
+
 		user, err := s.store.User().Find(userid2)
 		if err != nil {
 			s.error(w, request, http.StatusNotFound, errors.New("not found"))
 			return
 		}
-
-		userid, err := s.JWTproccessingAndUpdateOnline(w, request)
-		if int(userid) > 0 {
-			user.Me = userid2 == userid
+		if int(JwtUser) > 0 {
+			user.Me = userid2 == JwtUser
 		}
 
 		friends, err := s.GetFriends(userid2)
@@ -348,7 +348,7 @@ func (s *server) HandleGetUser() http.HandlerFunc {
 		}
 
 		friendStatus := model.Friends{}
-		friendStatus.User1 = int(userid)
+		friendStatus.User1 = int(JwtUser)
 		friendStatus.User2 = userid2
 
 		err = s.store.Friends().GetStatusFriend(&friendStatus)
