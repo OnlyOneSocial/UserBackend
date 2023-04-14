@@ -251,7 +251,7 @@ func (r *UserRepository) ChangeSettingsMain(settings *model.SettingsMain) error 
 // GetAllUsersWithPassword ...
 func (r *UserRepository) GetAllUsersWithPassword() (users []model.User, err error) {
 
-	rows, err := r.store.db.Query("SELECT username,id,password from users")
+	rows, err := r.store.db.Query("SELECT username,id,password from users where ssid is NULL")
 	if err != nil {
 		return users, err
 	}
