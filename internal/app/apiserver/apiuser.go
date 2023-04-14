@@ -54,7 +54,6 @@ func (s *server) JWTproccessingAndUpdateOnline(w http.ResponseWriter, request *h
 	userid, err := s.GetDataFromToken(w, request)
 	println(userid.LegacyID)
 	println(userid.UserUUID)
-	println(err.Error())
 
 	if err != nil {
 		return 0, err
