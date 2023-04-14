@@ -140,6 +140,10 @@ func (s *server) GetDataFromToken(w http.ResponseWriter, r *http.Request) (userA
 		return []byte(jwtsignkey), nil
 	})
 
+	if parsedToken == nil || parsedToken.Method == nil {
+		return userAuthData, errors.New("Error parsing token")
+	}
+
 	if parsedToken.Method.Alg() != "HS256" {
 		path, err := os.Getwd()
 		fmt.Println(path)
