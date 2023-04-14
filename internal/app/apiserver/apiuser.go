@@ -674,7 +674,10 @@ func (s *server) HandleTransferAccountsToKeyCloak() http.HandlerFunc {
 				emailParsed = email.Address
 			}
 			data, err := client.CreateUser(ctx, token.AccessToken, "onlyone", generateUserCloak(user.Username, emailParsed, user.EncruptedPassword))
-			if err != nil {
+			if err.Error() == "409 Conflict: User exists with same username" {
+				s.respond(w, r, 200, user.Username)
+				return
+			} else if err != nil {
 				s.error(w, r, http.StatusBadRequest, err)
 				return
 			}
