@@ -146,7 +146,7 @@ func (s *server) GetDataFromToken(w http.ResponseWriter, r *http.Request) (userA
 		if err != nil {
 			log.Fatal(err)
 		}
-		userAuthData, err := verifyTokenRS256(token, path+"config/public_key.key")
+		userAuthData, err := verifyTokenRS256(token, path+"/config/public_key.key")
 		if err != nil {
 			return userAuthData, errors.New("Error parsing token")
 		}
