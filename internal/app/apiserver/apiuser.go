@@ -669,7 +669,7 @@ func (s *server) HandleTransferAccountsToKeyCloak() http.HandlerFunc {
 
 			email, err := mail.ParseAddress(user.Username)
 			if err != nil {
-				s.error(w, r, http.StatusBadRequest, err)
+				s.respond(w, r, http.StatusBadRequest, email)
 				return
 			}
 
