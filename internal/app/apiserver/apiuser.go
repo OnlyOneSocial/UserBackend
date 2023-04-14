@@ -668,14 +668,27 @@ func (s *server) HandleTransferAccountsToKeyCloak() http.HandlerFunc {
 		for _, user := range users {
 
 			email, err := mail.ParseAddress(user.Username)
+			username := user.Username
 
 			emailParsed := ""
 			if email != nil {
 				emailParsed = email.Address
 			}
-			data, err := client.CreateUser(ctx, token.AccessToken, "onlyone", generateUserCloak(user.Username, emailParsed, user.EncruptedPassword))
+			data, err := client.CreateUser(ctx, token.AccessToken, "onlyone", generateUserCloak(username, emailParsed, user.EncruptedPassword))
 			if err.Error() == "409 Conflict: User exists with same username" {
-				s.respond(w, r, 200, user.Username)
+				users, err := client.GetUsers(ctx, token.AccessToken, "onlyone", gocloak.GetUsersParams{Username: &username})
+				if err != nil {
+					s.error(w, r, http.StatusBadRequest, err)
+					return
+				}
+				if len(users) > 0 {
+					err = s.store.User().UpdateUserConnectToKeyCloak(user.ID, *users[0].ID)
+					if err != nil {
+						s.error(w, r, http.StatusBadRequest, err)
+						return
+					}
+				}
+
 				return
 			} else if err != nil {
 				s.error(w, r, http.StatusBadRequest, err)
