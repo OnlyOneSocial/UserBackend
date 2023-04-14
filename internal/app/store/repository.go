@@ -37,4 +37,5 @@ type UserRepository interface {
 	Get() ([]model.User, error)
 	GetAllUsersWithPassword() (users []model.User, err error)
 	UpdateUserConnectToKeyCloak(userid int, keycloak string) error
+	GetUserIDBySSOID(ssoid string) (userid int, err error)
 }

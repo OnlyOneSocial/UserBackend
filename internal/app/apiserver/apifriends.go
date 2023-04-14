@@ -143,7 +143,7 @@ func (s *server) HandleGetRequests() http.HandlerFunc {
 			return
 		}
 
-		Requests, err := s.GetRequests(int(userid))
+		Requests, err := s.GetRequests(int(userid.LegacyID))
 
 		if err != nil {
 			s.error(w, request, http.StatusUnprocessableEntity, err)
@@ -163,7 +163,7 @@ func (s *server) HandleGetSubscribes() http.HandlerFunc {
 			return
 		}
 
-		Requests, err := s.store.Friends().GetAllRequests(int(userid))
+		Requests, err := s.store.Friends().GetAllRequests(int(userid.LegacyID))
 
 		if err != nil {
 			s.error(w, request, http.StatusUnprocessableEntity, err)
@@ -210,7 +210,7 @@ func (s *server) HandleRequest() http.HandlerFunc {
 		}
 
 		friend := model.Friends{
-			User1: int(userid),
+			User1: int(userid.LegacyID),
 			User2: userid2,
 		}
 
@@ -223,7 +223,7 @@ func (s *server) HandleRequest() http.HandlerFunc {
 
 		b := &bytes.Buffer{}
 
-		thisUser, err := s.store.User().Find(int(userid))
+		thisUser, err := s.store.User().Find(int(userid.LegacyID))
 
 		reqData := model.Notification{
 			Type:      "request_send",
@@ -271,7 +271,7 @@ func (s *server) HandleRequestAccept() http.HandlerFunc {
 		}
 
 		friend := model.Friends{
-			User1: int(userid),
+			User1: int(userid.LegacyID),
 			User2: userid2,
 		}
 
@@ -283,7 +283,7 @@ func (s *server) HandleRequestAccept() http.HandlerFunc {
 
 		b := &bytes.Buffer{}
 
-		thisUser, err := s.store.User().Find(int(userid))
+		thisUser, err := s.store.User().Find(int(userid.LegacyID))
 
 		reqData := model.Notification{
 			Type:      "request_accept",

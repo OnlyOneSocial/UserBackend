@@ -269,6 +269,16 @@ func (r *UserRepository) GetAllUsersWithPassword() (users []model.User, err erro
 	return users, err
 }
 
+// GetUserIDBySSOID ...
+func (r *UserRepository) GetUserIDBySSOID(ssoid string) (userid int, err error) {
+
+	err = r.store.db.QueryRow("SELECT id from users where ssoid = $1",
+		ssoid,
+	).Scan(&userid)
+
+	return userid, err
+}
+
 // FindByUsernameAndPassword ...
 func (r *UserRepository) FindByUsernameAndPassword(u *model.User) error {
 

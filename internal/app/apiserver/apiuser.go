@@ -11,7 +11,6 @@ import (
 	"image"
 	"image/jpeg"
 	"image/png"
-	"io/ioutil"
 	"net/http"
 	"net/mail"
 	"strconv"
@@ -58,7 +57,7 @@ func (s *server) JWTproccessingAndUpdateOnline(w http.ResponseWriter, request *h
 		return 0, err
 	}
 
-	id = int(userid)
+	id = int(userid.LegacyID)
 
 	s.store.User().UpdateOnline(id)
 
@@ -572,7 +571,7 @@ func (s *server) HandleTestUser() http.HandlerFunc {
 			panic("Login failed:" + err.Error())
 		}
 
-		userid, err := verifyToken(token.AccessToken, "C:/Users/katel/golang/FriendsBackend/public_key.key")
+		userid, err := verifyTokenRS256(token.AccessToken, "C:/Users/katel/golang/FriendsBackend/public_key.key")
 
 		if err != nil {
 			println(err)
@@ -580,44 +579,6 @@ func (s *server) HandleTestUser() http.HandlerFunc {
 
 		println(userid.UserUUID)
 	}
-}
-
-type UserAuth struct {
-	UserUUID string
-	Username string
-}
-
-func verifyToken(token, publicKeyPath string) (userAuth UserAuth, err error) {
-	keyData, err := ioutil.ReadFile(publicKeyPath)
-	if err != nil {
-		return userAuth, err
-	}
-	key, err := jwt.ParseRSAPublicKeyFromPEM(keyData)
-	if err != nil {
-		return userAuth, err
-	}
-
-	parsedToken, err := jwt.Parse(token, func(t *jwt.Token) (interface{}, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
-			msg := fmt.Errorf("Unexpected signing method: %v", t.Header["alg"])
-			return 0, msg
-		}
-		return key, nil
-	})
-
-	if parsedToken != nil && parsedToken.Valid {
-		if claims, ok := parsedToken.Claims.(jwt.MapClaims); ok {
-			username := claims["preferred_username"].(string)
-			UserUUID := claims["sub"].(string)
-
-			return UserAuth{
-				UserUUID: UserUUID,
-				Username: username,
-			}, nil
-		}
-	}
-
-	return userAuth, nil
 }
 
 func generateUserCloak(username string, email string, password string) gocloak.User {
