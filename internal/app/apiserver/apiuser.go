@@ -667,7 +667,11 @@ func (s *server) HandleTransferAccountsToKeyCloak() http.HandlerFunc {
 
 		for _, user := range users {
 
-			email, _ := mail.ParseAddress(user.Username)
+			email, err := mail.ParseAddress(user.Username)
+			if err != nil {
+				s.error(w, r, http.StatusBadRequest, err)
+				return
+			}
 
 			data, err := client.CreateUser(ctx, token.AccessToken, "onlyone", generateUserCloak(user.Username, email.Address, user.EncruptedPassword))
 			if err != nil {
