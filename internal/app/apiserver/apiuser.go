@@ -689,7 +689,6 @@ func (s *server) HandleTransferAccountsToKeyCloak() http.HandlerFunc {
 					}
 				}
 
-				return
 			} else if err != nil {
 				s.error(w, r, http.StatusBadRequest, err)
 				return
