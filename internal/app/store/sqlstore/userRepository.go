@@ -252,6 +252,9 @@ func (r *UserRepository) ChangeSettingsMain(settings *model.SettingsMain) error 
 func (r *UserRepository) GetAllUsersWithPassword() (users []model.User, err error) {
 
 	rows, err := r.store.db.Query("SELECT username,id,password from users")
+	if err != nil {
+		return users, err
+	}
 
 	for rows.Next() {
 		user := model.User{}
