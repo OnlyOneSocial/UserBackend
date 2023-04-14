@@ -659,17 +659,14 @@ func (s *server) HandleTransferAccountsToKeyCloak() http.HandlerFunc {
 		}
 
 		users, err := s.store.User().GetAllUsersWithPassword()
-
 		if err != nil {
 			s.error(w, r, http.StatusBadRequest, err)
 			return
 		}
 
 		for _, user := range users {
-
 			email, err := mail.ParseAddress(user.Username)
 			username := user.Username
-
 			emailParsed := ""
 			if email != nil {
 				emailParsed = email.Address
