@@ -33,9 +33,9 @@ func (s *server) ConfigureUserRouter() {
 
 	router.HandleFunc("/testUser", s.HandleTestUser()).Methods("GET")
 
-	router.HandleFunc("/get/{id}", s.HandleGetUser()).Methods("GET")         // Получение данных о пользователе
-	router.HandleFunc("/get_by_uuid/{id}", s.HandleGetUser()).Methods("GET") // Получение данных о пользователе по uuid
-	router.HandleFunc("/get", s.HandleGetUsers()).Methods("GET")             // Получение данных о пользователях
+	router.HandleFunc("/get/{id}", s.HandleGetUser()).Methods("GET")              // Получение данных о пользователе
+	router.HandleFunc("/get_by_uuid/{id}", s.HandeGetUserByUUID()).Methods("GET") // Получение данных о пользователе по uuid
+	router.HandleFunc("/get", s.HandleGetUsers()).Methods("GET")                  // Получение данных о пользователях
 	router.HandleFunc("/thisuser", s.HandleGetThisUser()).Methods("GET")
 	router.HandleFunc("/login", s.HandleLoginUser()).Methods("POST")                // Авторизация
 	router.HandleFunc("/login_android", s.HandleLoginUserAndroid()).Methods("POST") // Авторизация
