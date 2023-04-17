@@ -33,8 +33,9 @@ func (s *server) ConfigureUserRouter() {
 
 	router.HandleFunc("/testUser", s.HandleTestUser()).Methods("GET")
 
-	router.HandleFunc("/get/{id}", s.HandleGetUser()).Methods("GET") // Получение данных о пользователе
-	router.HandleFunc("/get", s.HandleGetUsers()).Methods("GET")     // Получение данных о пользователях
+	router.HandleFunc("/get/{id}", s.HandleGetUser()).Methods("GET")         // Получение данных о пользователе
+	router.HandleFunc("/get_by_uuid/{id}", s.HandleGetUser()).Methods("GET") // Получение данных о пользователе по uuid
+	router.HandleFunc("/get", s.HandleGetUsers()).Methods("GET")             // Получение данных о пользователях
 	router.HandleFunc("/thisuser", s.HandleGetThisUser()).Methods("GET")
 	router.HandleFunc("/login", s.HandleLoginUser()).Methods("POST")                // Авторизация
 	router.HandleFunc("/login_android", s.HandleLoginUserAndroid()).Methods("POST") // Авторизация
@@ -315,16 +316,77 @@ func (s *server) HandleGetThisUser() http.HandlerFunc {
 	}
 }
 
+//FriendStatus ...
+type FriendStatus struct {
+	ForMe  bool `json:"forme"`
+	Status int  `json:"status"`
+}
+
+//UserOutput ...
+type UserOutput struct {
+	FriendStatus FriendStatus  `json:"friend_status"`
+	User         model.User    `json:"user"`
+	Friends      FriendsStruct `json:"friends"`
+}
+
+func (s *server) UserGetProccess(w http.ResponseWriter, r *http.Request, requestUserID int) (userOutput UserOutput, err error) {
+	JwtUser, err := s.JWTproccessingAndUpdateOnline(w, r)
+
+	user, err := s.store.User().Find(requestUserID)
+	if err != nil {
+		s.error(w, r, http.StatusNotFound, errors.New("not found"))
+		return userOutput, err
+	}
+	if int(JwtUser) > 0 {
+		user.Me = requestUserID == JwtUser
+	}
+
+	friends, err := s.GetFriends(requestUserID)
+	if err != nil {
+		return userOutput, err
+	}
+
+	friendStatus := model.Friends{}
+	friendStatus.User1 = int(JwtUser)
+	friendStatus.User2 = requestUserID
+
+	err = s.store.Friends().GetStatusFriend(&friendStatus)
+	if err != nil && err.Error() == "sql: no rows in result set" {
+		friendStatus.Status = 3
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+	userOutput = UserOutput{
+		User:    user,
+		Friends: friends,
+		FriendStatus: FriendStatus{
+			ForMe:  friendStatus.ForMe,
+			Status: friendStatus.Status,
+		},
+	}
+
+	return userOutput, err
+}
+
+func (s *server) HandeGetUserByUUID() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		UserUUID := vars["id"]
+		userid, err := s.store.User().GetUserIDBySSOID(UserUUID)
+		if err != nil {
+			s.error(w, r, http.StatusNotFound, err)
+			return
+		}
+
+		userOutput, err := s.UserGetProccess(w, r, userid)
+
+		s.respond(w, r, http.StatusOK, userOutput)
+
+	}
+}
+
 func (s *server) HandleGetUser() http.HandlerFunc {
-	type FriendStatus struct {
-		ForMe  bool `json:"forme"`
-		Status int  `json:"status"`
-	}
-	type User struct {
-		FriendStatus FriendStatus  `json:"friend_status"`
-		User         model.User    `json:"user"`
-		Friends      FriendsStruct `json:"friends"`
-	}
+
 	return func(w http.ResponseWriter, request *http.Request) {
 		vars := mux.Vars(request)
 		userid2, err := strconv.Atoi(vars["id"])
@@ -333,42 +395,9 @@ func (s *server) HandleGetUser() http.HandlerFunc {
 			return
 		}
 
-		JwtUser, err := s.JWTproccessingAndUpdateOnline(w, request)
+		userOutput, err := s.UserGetProccess(w, request, userid2)
 
-		user, err := s.store.User().Find(userid2)
-		if err != nil {
-			s.error(w, request, http.StatusNotFound, errors.New("not found"))
-			return
-		}
-		if int(JwtUser) > 0 {
-			user.Me = userid2 == JwtUser
-		}
-
-		friends, err := s.GetFriends(userid2)
-		if err != nil {
-			return
-		}
-
-		friendStatus := model.Friends{}
-		friendStatus.User1 = int(JwtUser)
-		friendStatus.User2 = userid2
-
-		err = s.store.Friends().GetStatusFriend(&friendStatus)
-		if err != nil && err.Error() == "sql: no rows in result set" {
-			friendStatus.Status = 3
-		}
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-
-		UserModel := User{
-			User:    user,
-			Friends: friends,
-			FriendStatus: FriendStatus{
-				ForMe:  friendStatus.ForMe,
-				Status: friendStatus.Status,
-			},
-		}
-
-		s.respond(w, request, http.StatusOK, UserModel)
+		s.respond(w, request, http.StatusOK, userOutput)
 	}
 }
 
